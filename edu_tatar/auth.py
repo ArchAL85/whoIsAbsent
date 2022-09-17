@@ -146,9 +146,3 @@ class EduTatar:
     #
     # def __del__(self):
     #     self.logout()
-
-
-edu_tatar_user = EduTatar('1562000003', 'kbwtqbyyjgjkbc#1')
-user = edu_tatar_user.connected()
-print(user)
-edu_tatar_user.logout()
