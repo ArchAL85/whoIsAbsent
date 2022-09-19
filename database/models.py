@@ -1,6 +1,7 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, VARCHAR, DATETIME
+from sqlalchemy import Column, Integer, String, ForeignKey, VARCHAR, DateTime, PrimaryKeyConstraint
 from sqlalchemy.orm import relationship
-from database.db import Base
+from database.db import Base, engine
+from datetime import datetime
 
 
 class Reasons(Base):
@@ -10,87 +11,117 @@ class Reasons(Base):
     title = Column(VARCHAR(50), nullable=False)
     description = Column(String, nullable=False)
 
+    absent = relationship('Absents', back_populates='reasons')
+
 
 class Users(Base):
     __tablename__ = "Users"
 
     user_id = Column(Integer, primary_key=True, unique=True, nullable=False, autoincrement=True)
     telegram_id = Column(Integer)
-    edu_tatar_id = Column(Integer)
-    surname = Column(String, nullable=False)
-    name = Column(String, nullable=False)
-    middlename = Column(String)
+    edu_tatar_id = Column(VARCHAR(15))
+    surname = Column(VARCHAR(15), nullable=False)
+    name = Column(VARCHAR(15), nullable=False)
+    middlename = Column(VARCHAR(15))
+    code = Column(VARCHAR(15))
+
+    absent = relationship('Absents', back_populates='users')
+    classes = relationship('User_class', back_populates='users')
+    cabinet = relationship("Cabinets", back_populates="users")
+    task = relationship("Task", back_populates="users")
 
     def get_name(self):
         return f"{self.surname} {self.name}"
 
 
-class Absent(Base):
+class Absents(Base):
     __tablename__ = "Absents"
 
     absent_id = Column(Integer, primary_key=True, unique=True, nullable=False, autoincrement=True)
-    reason_id = Column(Integer, ForeignKey("Reasons.id"), nullable=False)
-    user_id = Column(Integer, ForeignKey("Users.id"), nullable=False)
-    date = Column(DATETIME, default=now())
+    reason_id = Column(Integer, ForeignKey("Reasons.reason_id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("Users.user_id"), nullable=False)
+    date = Column(DateTime, default=datetime.now)
+
+    users = relationship('Users', back_populates='absent')
+    reasons = relationship('Reasons', back_populates='absent')
 
 
-class Report(Base):
-    __tablename__ = "reports"
+class Classes(Base):
+    __tablename__ = 'Classes'
 
-    id = Column(Integer, primary_key=True, unique=True, nullable=False, autoincrement=True)
-    teaching_class = Column(Integer, ForeignKey("school_classes.id"), nullable=False)
-    date = Column(String, nullable=False)
+    class_id = Column(Integer, primary_key=True, unique=True, nullable=False)
+    number = Column(Integer, nullable=False)
+    literal = Column(VARCHAR(2), nullable=False)
+
+    classes = relationship('User_class', back_populates='user_class')
 
 
-class SchoolClass(Base):
-    __tablename__ = "school_classes"
+class User_class(Base):
+    __tablename__ = "User_class"
 
-    id = Column(Integer, primary_key=True, unique=True, nullable=False, autoincrement=True)
-    class_number = Column(Integer, nullable=False)
-    liter = Column(VARCHAR(1), nullable=False)
+    user_id = Column(Integer, ForeignKey("Users.user_id"), nullable=False)
+    class_id = Column(Integer, ForeignKey("Classes.class_id"), nullable=False)
 
-    students = relationship("Student", back_populates="school_class")
+    user_class = relationship("Classes", back_populates='classes')
+    users = relationship('Users', back_populates='classes')
+
+    __table_args__ = (
+        PrimaryKeyConstraint(user_id, class_id),
+    )
 
 
 class Schedule(Base):
-    __tablename__ = "schedule"
+    __tablename__ = "Schedule"
 
     id = Column(Integer, primary_key=True, unique=True, nullable=False, autoincrement=True)
-    day_of_week = Column(String, nullable=False)
+    lesson = Column(VARCHAR(50), nullable=False)
+    day_of_week = Column(VARCHAR(15), nullable=False)
     index_number = Column(Integer, nullable=False)
-    teaching_class = Column(Integer, ForeignKey("school_classes.id"), nullable=False)
-    subject_id = Column(Integer, ForeignKey("subjects.id"), nullable=False)
+    teacher_id = Column(Integer, ForeignKey("Users.user_id"), nullable=False)
+    class_id = Column(Integer, ForeignKey("Classes.class_id"), nullable=False)
 
 
-class Subjects(Base):
-    __tablename__ = "subjects"
+class Role(Base):
+    __tablename__ = 'Role'
 
-    id = Column(Integer, primary_key=True, unique=True, nullable=False, autoincrement=True)
-    title = Column(String, nullable=False)
-    teacher_id = Column(Integer, ForeignKey("teachers.id"), nullable=False)
-
-
-class Teacher(Base):
-    __tablename__ = "teachers"
-
-    id = Column(Integer, primary_key=True, unique=True, nullable=False, autoincrement=True)
-    surname = Column(String, nullable=False)
-    name = Column(String, nullable=False)
-    patronymic = Column(String, nullable=False)
-    telegram_id = Column(Integer, unique=True)
-
-    link = relationship("InvitationLink", back_populates="teacher")
-
-    def get_full_name(self):
-        return f"{self.surname} {self.name} {self.patronymic}"
+    role_id = Column(Integer, primary_key=True, unique=True, nullable=False, autoincrement=True)
+    title = Column(VARCHAR(50), nullable=False)
+    description = Column(String)
 
 
-class InvitationLink(Base):
-    __tablename__ = "invitation_links"
+class User_role(Base):
+    __tablename__ = "User_role"
+
+    user_id = Column(Integer, ForeignKey("Users.user_id"), nullable=False)
+    role_id = Column(Integer, ForeignKey("Role.role_id"), nullable=False)
+
+    __table_args__ = (
+        PrimaryKeyConstraint(user_id, role_id),
+    )
+
+
+class Cabinets(Base):
+    __tablename__ = 'Cabinets'
 
     id = Column(Integer, primary_key=True, unique=True, nullable=False, autoincrement=True)
-    for_teacher_id = Column(Integer, ForeignKey("teachers.id"), nullable=False)
-    code = Column(String, nullable=False)
-    is_used = Column(Boolean, nullable=False, default=False)
+    number = Column(VARCHAR(50), nullable=False)
+    floor = Column(Integer, nullable=False)
+    description = Column(String)
+    user_id = Column(Integer, ForeignKey("Users.user_id"), nullable=False)
 
-    teacher = relationship("Teacher", back_populates="link")
+    users = relationship("Users", back_populates="cabinet")
+
+
+class Task(Base):
+    __tablename__ = 'Task'
+
+    task_id = Column(Integer, primary_key=True, unique=True, nullable=False, autoincrement=True)
+    start_date = Column(DateTime, default=datetime.now)
+    client_id = Column(Integer, ForeignKey("Users.user_id"), nullable=False)
+    end_date = Column(DateTime)
+    employee = Column(Integer, ForeignKey("Users.user_id"))
+
+    users = relationship("Users", back_populates="task")
+
+
+# Base.metadata.create_all(engine)

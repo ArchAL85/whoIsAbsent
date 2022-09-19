@@ -8,7 +8,9 @@ class EduTatar:
     _MAIN_URL = 'https://edu.tatar.ru/user/anketa'
     _CLASSES_PAGE = 'https://edu.tatar.ru/school/academic_year/classes'  # <tbody id="dataBody">
 
-    def __init__(self, login, password):
+    def __init__(self, user):
+        login = user['login']
+        password = user['password']
         self.s = requests.Session()
         self.s.headers.update({
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36',
