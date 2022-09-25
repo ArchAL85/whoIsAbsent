@@ -1,12 +1,19 @@
 import requests
 from bs4 import BeautifulSoup
+from special.funcforbot import get_int_time
+from config import user_list, special_users_url
+
 
 
 class EduTatar:
     _LOGIN_URL = 'https://edu.tatar.ru/logon'  # Страница Логина
     _LOGOUT_URL = 'https://edu.tatar.ru/logoff'
     _MAIN_URL = 'https://edu.tatar.ru/user/anketa'
+    # Список классов содержится в таблице
     _CLASSES_PAGE = 'https://edu.tatar.ru/school/academic_year/classes'  # <tbody id="dataBody">
+    date = get_int_time()
+    # @?@ - последовательность для среза, в это место вставляем ID класса
+    _SCHEDULE = f'https://edu.tatar.ru/school/schedule/lessons?edu_class_id=@?@&fdate={date}&term_number=1'
 
     def __init__(self, user):
         login = user['login']
@@ -79,27 +86,28 @@ class EduTatar:
                 users.append(name + [td[2], td[3]])
         return users
 
-    # def get_users(self):
-    #     # Получить список всех активных пользователей из edu.tatar.ru для образовательного учреждения.
-    #     # Нужен вход от имени директора ОУ. Список загружается только при первом входе директора и назначении ролей.
-    #     url = 'https://edu.tatar.ru/user/edu_user/?profile_id='
-    #     urls = user_list
-    #     users = []
-    #     for url_id in urls:
-    #         get_users_from_page = BeautifulSoup(self.get_html(url + str(url_id)), 'lxml')
-    #         users.extend(self.get_user_list(get_users_from_page))
-    #         get_pages = get_users_from_page.find('p', {"class": "pages"})
-    #         if get_pages:
-    #             pages = [t.string.strip() for t in get_pages.find_all('a', href=True)]
-    #             for page in pages:
-    #                 get_users_from_page = BeautifulSoup(self.get_html(url + str(url_id)) + '&page=' + str(page), 'lxml')
-    #                 users.extend(self.get_user_list(get_users_from_page))
-    #     if special_users_url:
-    #         get_users_from_page = BeautifulSoup(self.get_html(special_users_url), 'lxml')
-    #         users.extend(self.get_user_list(get_users_from_page))
-    #     return users
+    def get_users(self):
+        """Получить список всех активных пользователей из edu.tatar.ru для образовательного учреждения.
+        Нужен вход от имени директора ОУ или администратора. Список загружается только при первом входе директора и назначении ролей."""
+        urls = user_list
+        url = 'https://edu.tatar.ru/user/edu_user/?profile_id='
+        users = {}
+        for url_id, role in urls.items():
+            get_users_from_page = BeautifulSoup(self.get_html(url + str(url_id)), 'lxml')
+            users[role] = self.get_user_list(get_users_from_page)
+            get_pages = get_users_from_page.find('p', {"class": "pages"})
+            if get_pages:
+                pages = [t.string.strip() for t in get_pages.find_all('a', href=True)]
+                for page in pages:
+                    get_users_from_page = BeautifulSoup(self.get_html(url + str(url_id)) + '&page=' + str(page), 'lxml')
+                    users[role].extend(self.get_user_list(get_users_from_page))
+        if special_users_url:
+            get_users_from_page = BeautifulSoup(self.get_html(special_users_url), 'lxml')
+            users['Специалисты'] = self.get_user_list(get_users_from_page)
+        return users
 
     def get_cabinets(self):
+        """Возвращает кабинеты вида [[номер, наименование, этаж]]"""
         url = 'https://edu.tatar.ru/school/classroom'
         cabinets = []
         get_cabinets = BeautifulSoup(self.get_html(url), 'lxml')
@@ -110,7 +118,7 @@ class EduTatar:
         return cabinets[1:]
 
     def get_students_classes(self):
-        # подгружаем классы учеников
+        """Подгружаем классы учеников. Вернёт ID класса, класс, букву, классного руководителя"""
         url = 'https://edu.tatar.ru/school/academic_year/classes'
         classes = []
         get_classes = BeautifulSoup(self.get_html(url), 'lxml')
@@ -120,12 +128,13 @@ class EduTatar:
             try:
                 class_id = s.find('a', text='(Свойства класса)', href=True).get('href')
                 class_id = str(class_id)[str(class_id).find('edu_class_id=') + len('edu_class_id='):]
-                classes.append([class_id, td[0], td[1]])
+                classes.append([class_id, td[0], td[1], td[2]])
             except Exception as e:
                 print(e)
         return classes
 
     def get_students(self):
+        """Возвращает словарь классов. вида {КЛАСС: {EDU_ID: [Ф, И, О], EDU_ID: [Ф, И, О]}}"""
         classes = self.get_students_classes()
         url = 'https://edu.tatar.ru/school/journal/school_editor?edu_class_id='
         all_students = {}
@@ -142,6 +151,24 @@ class EduTatar:
                     if len(fio) >= 2:
                         all_students[student_class[1] + student_class[2]][student_id] = fio
         return all_students
+
+    def get_schedule(self):
+        """Возвращает расписание вида: {class_id: {day: [[lesson, teacher], [lesson, teacher]]}}"""
+        all_classes = self.get_students_classes()
+        result = {}
+        for one in all_classes:
+            url = one[0].join(self._SCHEDULE.split('@?@'))
+            get_page_data = BeautifulSoup(self.get_html(url), 'lxml')
+            day_of_week = [el.get_text().split()[0] for el in get_page_data.find_all('h4')]
+            new_day = {}
+            for table, day in zip(get_page_data.find_all('table'), day_of_week):
+                new_day[day] = []
+                for lessons in table.find_all('tr', class_='lessonRow'):
+                    lesson = lessons.find_all('td', string=True)
+                    if lesson[1].get_text() != '-':
+                        new_day[day].append([lesson[1].get_text(), lesson[2].get_text()])
+            result[one[0]] = new_day
+        return result
 
     def logout(self):
         self.s.post(self._LOGOUT_URL)
