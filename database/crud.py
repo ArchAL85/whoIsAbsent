@@ -65,11 +65,34 @@ def load_data_from_edu_tatar():
 
 def load_schedule():
     """Выполняется только для загрузки или обновления расписания"""
+    session = SessionLocal()
     school = EduTatar(ADMIN)
     if school.connected()[0] == 'Ok':
         schedule = school.get_schedule()
-        print(schedule)
+        for class_ in schedule.keys():
+            print(schedule[class_])
+            for day_of_week, lessons in schedule[class_].items():
+                print(day_of_week, lessons)
+                add_lessons = [
+                    Schedule(
+                        lesson=lessons[i][0],
+                        day_of_week=day_of_week,
+                        index_number=i,
+                        teacher_id=get_user_by_name(lessons[i][1]).edu_tatar_id,
+                        class_id=class_
+                    ) for i in range(len(lessons))
+                ]
+                session.add_all(add_lessons)
+        session.commit()
 
+
+def get_user_by_name(name: str):
+    session = SessionLocal()
+    name = name.split()
+    if len(name) == 2:
+        return session.query(Users).filter(Users.surname == name[0], Users.name == name[1]).first()
+    if len(name) == 3:
+        return session.query(Users).filter(Users.surname == name[0], Users.name == name[1], Users.middlename == name[2]).first()
 
 
 load_schedule()

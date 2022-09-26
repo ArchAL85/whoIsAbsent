@@ -32,6 +32,9 @@ class Users(Base):
     def get_name(self):
         return f"{self.surname} {self.name}"
 
+    def get_full_name(self):
+        return f"{self.surname} {self.name} {self.middlename}"
+
 
 class Absents(Base):
     __tablename__ = "Absents"
