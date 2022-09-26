@@ -4,7 +4,6 @@ from special.funcforbot import get_int_time
 from config import user_list, special_users_url
 
 
-
 class EduTatar:
     _LOGIN_URL = 'https://edu.tatar.ru/logon'  # Страница Логина
     _LOGOUT_URL = 'https://edu.tatar.ru/logoff'
@@ -148,7 +147,9 @@ class EduTatar:
                     fio = td[0].split()
                     student_id = str(student.find('td', string=True, class_='fio').get('title')).split()[0]
                     student_id = student_id[student_id.find('login=') + len('login='):]
-                    if len(fio) >= 2:
+                    if len(fio) == 2:
+                        fio.append('')
+                    if len(fio) == 3:
                         all_students[student_class[1] + student_class[2]][student_id] = fio
         return all_students
 

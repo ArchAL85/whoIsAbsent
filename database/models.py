@@ -28,7 +28,6 @@ class Users(Base):
     absent = relationship('Absents', back_populates='users')
     classes = relationship('User_class', back_populates='users')
     cabinet = relationship("Cabinets", back_populates="users")
-    task = relationship("Task", back_populates="users")
 
     def get_name(self):
         return f"{self.surname} {self.name}"
@@ -107,7 +106,7 @@ class Cabinets(Base):
     number = Column(VARCHAR(50), nullable=False)
     floor = Column(Integer, nullable=False)
     description = Column(String)
-    user_id = Column(Integer, ForeignKey("Users.user_id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("Users.user_id"))
 
     users = relationship("Users", back_populates="cabinet")
 
@@ -120,8 +119,6 @@ class Task(Base):
     client_id = Column(Integer, ForeignKey("Users.user_id"), nullable=False)
     end_date = Column(DateTime)
     employee = Column(Integer, ForeignKey("Users.user_id"))
-
-    users = relationship("Users", back_populates="task")
 
 
 # Base.metadata.create_all(engine)
