@@ -28,6 +28,7 @@ class Users(Base):
     absent = relationship('Absents', back_populates='users')
     classes = relationship('User_class', back_populates='users')
     cabinet = relationship("Cabinets", back_populates="users")
+    role = relationship("User_role", back_populates="users")
 
     def get_name(self):
         return f"{self.surname} {self.name}"
@@ -90,12 +91,17 @@ class Role(Base):
     title = Column(VARCHAR(50), nullable=False)
     description = Column(String)
 
+    role = relationship('User_role', back_populates='about_role')
+
 
 class User_role(Base):
     __tablename__ = "User_role"
 
     user_id = Column(Integer, ForeignKey("Users.user_id"), nullable=False)
     role_id = Column(Integer, ForeignKey("Role.role_id"), nullable=False)
+
+    users = relationship('Users', back_populates='role')
+    about_role = relationship('Role', back_populates='role')
 
     __table_args__ = (
         PrimaryKeyConstraint(user_id, role_id),

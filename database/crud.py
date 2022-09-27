@@ -6,6 +6,36 @@ from database.models import *
 
 from edu_tatar.auth import EduTatar
 from config import ADMIN
+from special.funcforbot import generate_code
+
+
+def add_role_reasons():
+    """Добавляем все роли и причины отсутствия"""
+    session = SessionLocal()
+    role = [Role(role_id=1, title='Администратор', description='Административный работник'),
+            Role(role_id=2, title='Секретарь', description='Секретарь учреждения'),
+            Role(role_id=3, title='Сисадмин', description='Системный администратор'),
+            Role(role_id=4, title='Учитель', description='Учитель'),
+            Role(role_id=5, title='Воспитатель', description='Воспитатель'),
+            Role(role_id=6, title='Классный руководитель', description='Классный руководитель'),
+            Role(role_id=7, title='Сотрудник', description='Сотрудники без конкретной роли'),
+            Role(role_id=8, title='Ученик', description='Ученики')]
+    all_r = [[1, "ОРЗ, ОРВИ, ГРИПП", "ОРЗ, ОРВИ, грипп и аналогичные болезни"],
+             [2, 'COVID-19', 'COVID-19 - если подтверждён'],
+             [3, 'Болеет в Лицее', 'До приезда родителей или в изоляторе'],
+             [4, 'По заявлению', 'По заявлению или уважительной причине'],
+             [5, 'Олимпиада', "Участи в олимпиадах, конкурсах и т.д."],
+             [6, 'Олимпиада в Лицее', "Участи в олимпиадах, конкурсах и т.д. но находится в Лицее"],
+             [7, 'УТС', 'Уехал на сборы'],
+             [8, 'УТС в Лицее', 'В Лицее на сборах или подготовке'],
+             [9, 'Другое', 'Причина не известна']
+             ]
+    reason = [
+        Reasons(reason_id=reason_id, title=title, description=description) for reason_id, title, description in all_r
+    ]
+    session.add_all(role)
+    session.add_all(reason)
+    session.commit()
 
 
 def load_data_from_edu_tatar():
@@ -81,7 +111,7 @@ def load_schedule():
                             index_number=i,
                             teacher_id=user.edu_tatar_id,
                             class_id=class_
-                            )
+                        )
                     else:
                         for u in user:
                             lesson = Schedule(
@@ -132,7 +162,8 @@ def get_user_by_name(name: str):
     if len(name) == 2:
         return session.query(Users).filter(Users.surname == name[0], Users.name == name[1]).first()
     if len(name) == 3:
-        return session.query(Users).filter(Users.surname == name[0], Users.name == name[1], Users.middlename == name[2]).first()
+        return session.query(Users).filter(Users.surname == name[0], Users.name == name[1],
+                                           Users.middlename == name[2]).first()
     if len(name) > 3:
         return session.query(Users).filter(
             or_(and_(Users.surname == name[0], Users.name == name[1], Users.middlename == name[2]),
@@ -140,12 +171,12 @@ def get_user_by_name(name: str):
 
 
 def get_students_list(class_id):
-    school = EduTatar(ADMIN)
-    students = school.get_students()
+    """Возвращает список учеников класса"""
     session = SessionLocal()
-    for class_, students in students.items():
-        pass
-    session.commit()
+    students = session.query(User_class).filter(User_class.class_id == class_id).all()
+    users = [[student.users.get_name(), student.users.user_id] for student in students]
+    users.sort()
+    return users
 
 
 def get_user(surname=None, name=None, middlename=None, edu_id=None, telegram_id=None, user_id=None):
@@ -174,4 +205,63 @@ def get_class_id(class_: str):
     return session.query(Classes).filter(Classes.number == number, Classes.literal == literal).first().class_id
 
 
-set_student_class()
+def get_classes_list():
+    """Получить список классов [класс, буква, id]"""
+    session = SessionLocal()
+    classes = [[one.number, one.literal, one.class_id] for one in session.query(Classes).all()]
+    classes.sort()
+    return classes
+
+
+def create_code_for_auth():
+    """Создать коды для всех пользователей. Коды будут обновлены всем"""
+    session = SessionLocal()
+    users = session.query(Users)
+    for user in users:
+        users.filter(Users.edu_tatar_id == user.edu_tatar_id).update({'code': generate_code()})
+    session.commit()
+
+
+def get_user_list_with_role(role=None, not_role=None):
+    """Получить список пользователей с конкретными ролями"""
+    session = SessionLocal()
+    if not_role:
+        users = session.query(User_role).join(Users).filter(User_role.role_id != not_role)
+    else:
+        users = session.query(User_role).join(Users).filter(User_role.role_id == role)
+    return [f'{user.users.get_name()} https://t.me/innolyceum_bot?start={user.users.code}' for user in users]
+
+
+def user_code(code, telegram_id):
+    session = SessionLocal()
+    user = session.query(Users).filter(Users.code == code)
+    curr_user = user.first()
+    if curr_user:
+        user.update({'telegram_id': telegram_id, 'code': ''})
+        session.commit()
+        return curr_user.get_name()
+    else:
+        return False
+
+
+def user_by_telegram_id(telegram_id):
+    session = SessionLocal()
+    user = session.query(Users).filter(Users.telegram_id == telegram_id).first()
+    if user:
+        return user.get_name()
+    else:
+        return False
+
+
+def get_reasons():
+    """"Возвращает список причин [причина, id]"""
+    session = SessionLocal()
+    reasons = session.query(Reasons).all()
+    return [[reason.title, reason.reason_id] for reason in reasons]
+
+# add_role_reasons()
+# load_data_from_edu_tatar()
+# load_schedule()
+# set_student_role()
+# set_student_class()
+# create_code_for_auth()
