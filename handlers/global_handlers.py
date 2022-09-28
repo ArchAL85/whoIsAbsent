@@ -107,7 +107,6 @@ async def save_absent(cq: types.CallbackQuery):
                 await bot.send_message()
 
 
-
 @dp.message_handler(ChatTypeFilter(chat_type=types.ChatType.PRIVATE), commands=["get_codes"])
 async def get_codes(message: types.Message):
     if message.from_user.id in super_admins:

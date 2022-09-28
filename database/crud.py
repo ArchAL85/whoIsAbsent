@@ -230,7 +230,8 @@ def get_user_list_with_role(role=None, not_role=None):
         users = session.query(User_role).join(Users).filter(User_role.role_id != not_role)
     else:
         users = session.query(User_role).join(Users).filter(User_role.role_id == role)
-    return [f'{user.users.get_name()} https://t.me/innolyceum_bot?start={user.users.code}' for user in users]
+    return [f'{user.users.get_name()} https://t.me/innolyceum_bot?start={user.users.code}' for user in users
+            if user.users.code != '']
 
 
 def user_code(code, telegram_id):
