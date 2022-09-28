@@ -1,5 +1,6 @@
 import datetime
-from sqlalchemy import or_, and_
+from sqlalchemy import or_, and_, Date, cast, func
+from datetime import date
 
 from database.db import SessionLocal
 from database.models import *
@@ -258,6 +259,74 @@ def get_reasons():
     session = SessionLocal()
     reasons = session.query(Reasons).all()
     return [[reason.title, reason.reason_id] for reason in reasons]
+
+
+def get_absent_list(class_):
+    """Возвращает список id - учеников класса, кто отсутствует сегодня"""
+    session = SessionLocal()
+    absent = session.query(Absents).join(Reasons).join(Users).join(User_class).join(Classes).filter(
+        func.date(Absents.date) == datetime.now().date(), Classes.class_id == class_).all()
+    absent = [one.user_id for one in absent]
+    return absent
+
+
+def save_absent(reason_id, user_id):
+    """Сохранение отсутствующего"""
+    session = SessionLocal()
+    absent = Absents(reason_id=reason_id, user_id=user_id)
+    session.add(absent)
+    session.commit()
+    session.refresh(absent)
+
+
+def delete_absent(user_id):
+    """Удаление отсутствующего"""
+    session = SessionLocal()
+    session.query(Absents).filter(func.date(Absents.date) == datetime.now().date(), Absents.user_id == user_id) \
+        .delete(synchronize_session=False)
+    session.commit()
+
+
+def get_classes_by_id(class_id):
+    """Получить классов (id, класс, буква) по ID"""
+    session = SessionLocal()
+    classes = session.query(Classes).filter(Classes.class_id == class_id).first()
+    return classes.class_id, classes.number, classes.literal
+
+
+def get_absent_users_by_class(class_id):
+    """Возвращает список отсутствующих в классе вида [ФИ, причина]"""
+    session = SessionLocal()
+    absent = session.query(Absents).join(Reasons).join(Users).join(User_class).filter(
+        func.date(Absents.date) == datetime.now().date(), User_class.class_id == class_id).all()
+    absent = [[one.users.get_name(), one.reasons.title] for one in absent]
+    return absent
+
+
+def get_class_count(class_id):
+    """Возвращает количество учеников в классе и количество отсутствующих"""
+    session = SessionLocal()
+    class_count = session.query(User_class).filter(User_class.class_id == class_id).count()
+    absent_count = session.query(Absents).join(Users).join(User_class).filter(
+        func.date(Absents.date) == datetime.now().date(), User_class.class_id == class_id).count()
+    return class_count, absent_count
+
+
+def get_telegram_id(edu_id):
+    """Возвращает телеграм ID по edu_id"""
+    session = SessionLocal()
+    user = session.query(Users).filter(Users.edu_tatar_id == edu_id).first()
+    return user.telegram_id
+
+
+def get_first_lesson_today():
+    """Возвращает список учителей, у кого первый урок и в каком классе [edu_id, telegram_id, class_id]"""
+    session = SessionLocal()
+    day = ['понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота', 'воскресенье']
+    current_day = datetime.now()
+    lessons = session.query(Schedule).filter(Schedule.index_number == 1,
+                                             Schedule.day_of_week == day[datetime.weekday(current_day)]).all()
+    return [[lesson.teacher_id, get_telegram_id(lesson.teacher_id), lesson.class_id] for lesson in lessons]
 
 # add_role_reasons()
 # load_data_from_edu_tatar()

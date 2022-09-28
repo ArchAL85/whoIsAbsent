@@ -43,7 +43,7 @@ class Absents(Base):
     absent_id = Column(Integer, primary_key=True, unique=True, nullable=False, autoincrement=True)
     reason_id = Column(Integer, ForeignKey("Reasons.reason_id"), nullable=False)
     user_id = Column(Integer, ForeignKey("Users.user_id"), nullable=False)
-    date = Column(DateTime, default=datetime.now)
+    date = Column(DateTime, default=datetime.now().date())
 
     users = relationship('Users', back_populates='absent')
     reasons = relationship('Reasons', back_populates='absent')
