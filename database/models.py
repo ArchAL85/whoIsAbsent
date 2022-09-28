@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, VARCHAR, DateTime, PrimaryKeyConstraint
+from sqlalchemy import Column, Integer, String, ForeignKey, VARCHAR, DateTime, PrimaryKeyConstraint, Boolean
 from sqlalchemy.orm import relationship
 from database.db import Base, engine
 from datetime import datetime
@@ -10,6 +10,7 @@ class Reasons(Base):
     reason_id = Column(Integer, primary_key=True, unique=True, nullable=False, autoincrement=True)
     title = Column(VARCHAR(50), nullable=False)
     description = Column(String, nullable=False)
+    in_or_out = Column(Boolean, nullable=False)
 
     absent = relationship('Absents', back_populates='reasons')
 

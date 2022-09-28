@@ -100,9 +100,11 @@ async def save_absent(cq: types.CallbackQuery):
     if len(GLOBAL_SET) == len(all_classes):
         file_name = create_report()
         for telegram_id in admins:
-            with open(file_name, 'rb') as f:
-                await bot.send_document(telegram_id, f)
-
+            try:
+                with open(file_name, 'rb') as f:
+                    await bot.send_document(telegram_id, f)
+            except Exception as e:
+                await bot.send_message()
 
 
 

@@ -295,21 +295,27 @@ def get_classes_by_id(class_id):
 
 
 def get_absent_users_by_class(class_id):
-    """Возвращает список отсутствующих в классе вида [ФИ, причина]"""
+    """Возвращает список отсутствующих в классе вида [ФИ, причина, В лицее?]"""
     session = SessionLocal()
     absent = session.query(Absents).join(Reasons).join(Users).join(User_class).filter(
         func.date(Absents.date) == datetime.now().date(), User_class.class_id == class_id).all()
-    absent = [[one.users.get_name(), one.reasons.title] for one in absent]
+    absent = [[one.users.get_name(), one.reasons.title, one.reasons.in_or_out] for one in absent]
     return absent
 
 
 def get_class_count(class_id):
-    """Возвращает количество учеников в классе и количество отсутствующих"""
+    """Возвращает количество учеников в классе, количество отсутствующих, кто в лицее, кто вне лицея"""
     session = SessionLocal()
     class_count = session.query(User_class).filter(User_class.class_id == class_id).count()
     absent_count = session.query(Absents).join(Users).join(User_class).filter(
         func.date(Absents.date) == datetime.now().date(), User_class.class_id == class_id).count()
-    return class_count, absent_count
+    absent_in = session.query(Absents).join(Reasons).join(Users).join(User_class).filter(
+        func.date(Absents.date) == datetime.now().date(), User_class.class_id == class_id,
+        Reasons.in_or_out == True).count()
+    absent_out = session.query(Absents).join(Reasons).join(Users).join(User_class).filter(
+        func.date(Absents.date) == datetime.now().date(), User_class.class_id == class_id,
+        Reasons.in_or_out == False).count()
+    return class_count, absent_count, absent_in, absent_out
 
 
 def get_telegram_id(edu_id):
