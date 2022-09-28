@@ -219,7 +219,7 @@ def create_code_for_auth():
     session = SessionLocal()
     users = session.query(Users)
     for user in users:
-        users.filter(Users.edu_tatar_id == user.edu_tatar_id).update({'code': generate_code()})
+        users.filter(Users.edu_tatar_id == user.edu_tatar_id, Users.telegram_id == None).update({'code': generate_code()})
     session.commit()
 
 
