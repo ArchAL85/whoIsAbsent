@@ -8,6 +8,9 @@ def start():
         InlineKeyboardButton(
             text=f"Отметить отсутствующих",
             callback_data=f"main_absent"),
+        InlineKeyboardButton(
+            text=f"Оставить заявку на ремонт",
+            callback_data=f"main_repair"),
     )
     return kb
 
@@ -63,7 +66,7 @@ def students(class_):
 
 
 def reasons(class_, user):
-    kb = InlineKeyboardMarkup()
+    kb = InlineKeyboardMarkup(row_width=2)
     all_reasons = crud.get_reasons()
     buttons = [
         InlineKeyboardButton(

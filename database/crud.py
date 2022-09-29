@@ -1,5 +1,5 @@
 import datetime
-from sqlalchemy import or_, and_, Date, cast, func
+from sqlalchemy import or_, and_, func
 from datetime import date
 
 from database.db import SessionLocal
@@ -274,7 +274,7 @@ def get_absent_list(class_):
 def save_absent(reason_id, user_id):
     """Сохранение отсутствующего"""
     session = SessionLocal()
-    absent = Absents(reason_id=reason_id, user_id=user_id)
+    absent = Absents(reason_id=reason_id, user_id=user_id, date=datetime.now().date())
     session.add(absent)
     session.commit()
     session.refresh(absent)
