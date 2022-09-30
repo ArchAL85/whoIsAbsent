@@ -102,7 +102,7 @@ async def save_absent(cq: types.CallbackQuery):
         sex += 'а'
     await bot.send_message(info_group, f'{name} {sex} информацию по классу <b>{class_[1]}{class_[2]}</b>:\n'
                                        f'Учеников в классе: <b>{class_count[0] - class_count[1]} из {class_count[0]}</b>'
-                           + absent_message, parse_mode='HTML')
+                                       f'{absent_message}', parse_mode='HTML')
     await bot.send_message(cq.from_user.id, 'Выберите класс:', reply_markup=keyboard.classes())
     GLOBAL_SET.add(class_)
     all_classes = crud.get_classes_list()
