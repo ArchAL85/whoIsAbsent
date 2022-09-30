@@ -2,10 +2,16 @@ from aiogram.dispatcher.filters import ChatTypeFilter
 from loader import dp, bot
 from database import crud, models
 from aiogram import types
+import pymorphy2
+
+
 from config import admins, super_admins, info_group, GLOBAL_SET
 import messages
 from keyboards import keyboard
 from special.funcforbot import create_report
+
+
+morph = pymorphy2.MorphAnalyzer()
 
 
 @dp.message_handler(ChatTypeFilter(chat_type=types.ChatType.PRIVATE), commands=["start"])
@@ -89,14 +95,17 @@ async def save_absent(cq: types.CallbackQuery):
         for one in absent_list:
             absent_message += f'{one[0]} ({one[1]}), '
         absent_message = absent_message[:-2]
-    await bot.send_message(info_group, f'{user.get_name()} отправил информацию по классу {class_[1]}{class_[2]}:\n'
-                                       f'Учеников в классе: {class_count[0] - class_count[1]} из {class_count[0]}'
-                           + absent_message)
+    sex = 'отправил'
+    name = user.get_name()
+    parsed_word = morph.parse(name.split()[1])[0]
+    if parsed_word.tag.gender == 'femn':
+        sex += 'а'
+    await bot.send_message(info_group, f'{name} {sex} информацию по классу <b>{class_[1]}{class_[2]}</b>:\n'
+                                       f'Учеников в классе: <b>{class_count[0] - class_count[1]} из {class_count[0]}</b>'
+                           + absent_message, parse_mode='HTML')
     await bot.send_message(cq.from_user.id, 'Выберите класс:', reply_markup=keyboard.classes())
-    await bot.delete_message(chat_id=cq.from_user.id, message_id=cq.message.message_id)
     GLOBAL_SET.add(class_)
     all_classes = crud.get_classes_list()
-    crud.get_first_lesson_today()
     if len(GLOBAL_SET) == len(all_classes):
         file_name = create_report()
         for telegram_id in admins:
@@ -105,6 +114,19 @@ async def save_absent(cq: types.CallbackQuery):
                     await bot.send_document(telegram_id, f)
             except Exception as e:
                 await bot.send_message()
+    await bot.delete_message(chat_id=cq.from_user.id, message_id=cq.message.message_id)
+
+
+@dp.message_handler(ChatTypeFilter(chat_type=types.ChatType.PRIVATE), commands=["first_lesson"])
+async def get_codes(message: types.Message):
+    if message.from_user.id in super_admins:
+        all_lessons = crud.get_first_lesson_today()
+        lessons = [crud.get_classes_by_id(lesson[2]) for lesson in all_lessons]
+        lessons = [f'{lesson[1]}{lesson[2]}' for lesson in lessons]
+        teachers = [crud.get_user(edu_id=lesson[0]).get_name() for lesson in all_lessons]
+        users = [f'{lessons[i]} {teachers[i]}' for i in range(len(teachers))]
+        text = '\n'.join(users)
+        await message.answer(text)
 
 
 @dp.message_handler(ChatTypeFilter(chat_type=types.ChatType.PRIVATE), commands=["get_codes"])

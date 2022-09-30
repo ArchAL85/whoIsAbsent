@@ -21,7 +21,7 @@ async def remember():
 
 
 async def scheduler():
-    aioschedule.every().day.at("07:50").do(remember)
+    aioschedule.every().day.at("08:00").do(remember)
     while True:
         await aioschedule.run_pending()
         await asyncio.sleep(1)

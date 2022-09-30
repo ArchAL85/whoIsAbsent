@@ -331,7 +331,7 @@ def get_first_lesson_today():
     session = SessionLocal()
     day = ['понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота', 'воскресенье']
     current_day = datetime.now()
-    lessons = session.query(Schedule).filter(Schedule.index_number == 1,
+    lessons = session.query(Schedule).filter(Schedule.index_number == 0,
                                              Schedule.day_of_week == day[datetime.weekday(current_day)]).all()
     return [[lesson.teacher_id, get_telegram_id(lesson.teacher_id), lesson.class_id] for lesson in lessons]
 
