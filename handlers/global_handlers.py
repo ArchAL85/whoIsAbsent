@@ -18,14 +18,15 @@ morph = pymorphy2.MorphAnalyzer()
 async def start(message: types.Message):
     get_code = message.text.split()
     if crud.user_by_telegram_id(message.from_user.id):
-        await message.answer('🤖Перезапускаюсь для Вас!', reply_markup=keyboard.start())
+        await message.answer('🤖Перезапускаюсь для Вас!', reply_markup=keyboard.start(message.from_user.id))
     else:
         if len(get_code) > 1:
             res = crud.user_code(get_code[1], message.from_user.id)
             if res:
                 await message.answer(f'👋Приветствую Вас, {res}, в официальном боте ГАОУ "Лицей Иннополис".' +
                                      messages.hello)
-                await message.answer('Выберите, что Вы хотите сделать?', reply_markup=keyboard.start())
+                await message.answer('Выберите, что Вы хотите сделать?',
+                                     reply_markup=keyboard.start(message.from_user.id))
             else:
                 await message.answer('😐Нам не удалось найти Вас в нашей базе.')
         else:
@@ -38,14 +39,17 @@ async def get_class(cq: types.CallbackQuery):
     status = cq.data.split('_')[1]
     if status == 'absent':
         await bot.send_message(cq.from_user.id, 'Выберите класс:', reply_markup=keyboard.classes())
-
+    if status == 'admin':
+        await bot.send_message(cq.from_user.id, 'Добро пожаловать в панель администратора.\n'
+                                                'Выберите действие:', reply_markup=keyboard.admin_panel())
     await bot.delete_message(chat_id=cq.from_user.id, message_id=cq.message.message_id)
 
 
 @dp.callback_query_handler(ChatTypeFilter(chat_type=types.ChatType.PRIVATE), text_startswith='to_main')
 async def main_menu(cq: types.CallbackQuery):
     await bot.answer_callback_query(cq.id)
-    await bot.send_message(cq.from_user.id, 'Выберите, что Вы хотите сделать?', reply_markup=keyboard.start())
+    await bot.send_message(cq.from_user.id, 'Выберите, что Вы хотите сделать?',
+                           reply_markup=keyboard.start(cq.from_user.id))
 
     await bot.delete_message(chat_id=cq.from_user.id, message_id=cq.message.message_id)
 
@@ -113,20 +117,35 @@ async def save_absent(cq: types.CallbackQuery):
                 with open(file_name, 'rb') as f:
                     await bot.send_document(telegram_id, f)
             except Exception as e:
-                await bot.send_message()
+                await bot.send_message(148161847, f'{e}')
     await bot.delete_message(chat_id=cq.from_user.id, message_id=cq.message.message_id)
 
 
-@dp.message_handler(ChatTypeFilter(chat_type=types.ChatType.PRIVATE), commands=["first_lesson"])
-async def get_codes(message: types.Message):
-    if message.from_user.id in super_admins:
-        all_lessons = crud.get_first_lesson_today()
+@dp.callback_query_handler(ChatTypeFilter(chat_type=types.ChatType.PRIVATE), text_startswith='lesson_')
+async def get_codes(cq: types.CallbackQuery):
+    if cq.from_user.id in admins:
+        index = int(cq.data.split('_')[1])
+        all_lessons = crud.get_lesson_today(index)
         lessons = [crud.get_classes_by_id(lesson[2]) for lesson in all_lessons]
+        lessons.sort()
         lessons = [f'{lesson[1]}{lesson[2]}' for lesson in lessons]
         teachers = [crud.get_user(edu_id=lesson[0]).get_name() for lesson in all_lessons]
         users = [f'{lessons[i]} {teachers[i]}' for i in range(len(teachers))]
         text = '\n'.join(users)
-        await message.answer(text)
+        await bot.send_message(cq.from_user.id, text, reply_markup=keyboard.lessons_panel())
+        await bot.delete_message(chat_id=cq.from_user.id, message_id=cq.message.message_id)
+
+
+@dp.callback_query_handler(ChatTypeFilter(chat_type=types.ChatType.PRIVATE), text_startswith='admin')
+async def admin_panel(cq: types.CallbackQuery):
+    await bot.answer_callback_query(cq.id)
+    status = cq.data.split('_')[1]
+    if status == 'lessons':
+        await bot.send_message(cq.from_user.id, 'Выберите номер урока:', reply_markup=keyboard.lessons_panel())
+    if status == 'reports':
+        await bot.send_message(cq.from_user.id, 'Раздел в разработке.\n'
+                                                'Выберите действие:', reply_markup=keyboard.admin_panel())
+    await bot.delete_message(chat_id=cq.from_user.id, message_id=cq.message.message_id)
 
 
 @dp.message_handler(ChatTypeFilter(chat_type=types.ChatType.PRIVATE), commands=["get_codes"])

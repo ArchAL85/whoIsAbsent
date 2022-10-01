@@ -1,8 +1,9 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from database import crud
+from config import admins
 
 
-def start():
+def start(telegram_id: int) -> InlineKeyboardMarkup:
     kb = InlineKeyboardMarkup(row_width=2)
     kb.add(
         InlineKeyboardButton(
@@ -12,10 +13,16 @@ def start():
             text=f"Оставить заявку на ремонт",
             callback_data=f"main_repair"),
     )
+    if telegram_id in admins:
+        kb.add(
+            InlineKeyboardButton(
+                text=f"Администрирование",
+                callback_data=f"main_admin")
+        )
     return kb
 
 
-def classes():
+def classes() -> InlineKeyboardMarkup:
     kb = InlineKeyboardMarkup(row_width=2)
     class_ = crud.get_classes_list()
     buttons = [
@@ -34,7 +41,7 @@ def classes():
     return kb
 
 
-def students(class_):
+def students(class_) -> InlineKeyboardMarkup:
     kb = InlineKeyboardMarkup()
     all_students = crud.get_students_list(class_)
     absent_id = crud.get_absent_list(class_)
@@ -65,7 +72,7 @@ def students(class_):
     return kb
 
 
-def reasons(class_, user):
+def reasons(class_, user) -> InlineKeyboardMarkup:
     kb = InlineKeyboardMarkup(row_width=2)
     all_reasons = crud.get_reasons()
     buttons = [
@@ -84,7 +91,7 @@ def reasons(class_, user):
     return kb
 
 
-def first_lesson(class_):
+def first_lesson(class_) -> InlineKeyboardMarkup:
     kb = InlineKeyboardMarkup(row_width=2)
     button = crud.get_classes_by_id(class_)
     kb.add(
@@ -95,6 +102,46 @@ def first_lesson(class_):
     kb.add(
         InlineKeyboardButton(
             text=f'⬅ Назад',
+            callback_data=f"to_main")
+    )
+    return kb
+
+
+def admin_panel() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardMarkup(row_width=2)
+    kb.add(
+        InlineKeyboardButton(
+            text=f'Уроки',
+            callback_data=f"admin_lessons"
+        ),
+        InlineKeyboardButton(
+            text=f'Отчёты',
+            callback_data=f"admin_reports"
+        )
+    )
+    kb.add(
+        InlineKeyboardButton(
+            text=f'⬅ Назад',
+            callback_data=f"to_main")
+    )
+    return kb
+
+
+def lessons_panel() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardMarkup(row_width=4)
+    buttons = [
+        InlineKeyboardButton(
+            text=f'{i + 1}',
+            callback_data=f"lesson_{i}"
+        ) for i in range(7)
+    ]
+    kb.add(*buttons)
+    kb.add(
+        InlineKeyboardButton(
+            text=f'⬅ Назад',
+            callback_data=f"main_admin"),
+        InlineKeyboardButton(
+            text=f'В начало',
             callback_data=f"to_main")
     )
     return kb

@@ -7,12 +7,12 @@ from handlers import dp
 
 from config import GLOBAL_SET
 from keyboards.keyboard import first_lesson
-from database.crud import get_first_lesson_today
+from database.crud import get_lesson_today
 
 
 async def remember():
     GLOBAL_SET.clear()
-    all_lessons = get_first_lesson_today()
+    all_lessons = get_lesson_today(0)
     for lesson in all_lessons:
         if lesson[1]:
             await bot.send_message(chat_id=lesson[1],

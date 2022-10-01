@@ -246,13 +246,11 @@ def user_code(code, telegram_id):
         return False
 
 
-def user_by_telegram_id(telegram_id):
+def user_by_telegram_id(telegram_id) -> Users:
+    """Возвращается найденного пользователя по значению из телеграм"""
     session = SessionLocal()
     user = session.query(Users).filter(Users.telegram_id == telegram_id).first()
-    if user:
-        return user.get_name()
-    else:
-        return False
+    return user
 
 
 def get_reasons():
@@ -319,21 +317,22 @@ def get_class_count(class_id):
     return class_count, absent_count, absent_in, absent_out
 
 
-def get_telegram_id(edu_id):
+def get_telegram_id(edu_id) -> int:
     """Возвращает телеграм ID по edu_id"""
     session = SessionLocal()
     user = session.query(Users).filter(Users.edu_tatar_id == edu_id).first()
     return user.telegram_id
 
 
-def get_first_lesson_today():
+def get_lesson_today(index: int):
     """Возвращает список учителей, у кого первый урок и в каком классе [edu_id, telegram_id, class_id]"""
     session = SessionLocal()
     day = ['понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота', 'воскресенье']
     current_day = datetime.now()
-    lessons = session.query(Schedule).filter(Schedule.index_number == 0,
+    lessons = session.query(Schedule).filter(Schedule.index_number == index,
                                              Schedule.day_of_week == day[datetime.weekday(current_day)]).all()
     return [[lesson.teacher_id, get_telegram_id(lesson.teacher_id), lesson.class_id] for lesson in lessons]
+
 
 # add_role_reasons()
 # load_data_from_edu_tatar()
