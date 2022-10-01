@@ -104,7 +104,7 @@ async def save_absent(cq: types.CallbackQuery):
     parsed_word = morph.parse(name.split()[1])[0]
     if parsed_word.tag.gender == 'femn':
         sex += 'а'
-    await bot.send_message(info_group, f'{name} {sex} информацию по классу <b>{class_[1]}{class_[2]}</b>:\n'
+    await bot.send_message(info_group, f'{name} {sex} информацию по классу <b>{class_[0]}{class_[1]}</b>:\n'
                                        f'Учеников в классе: <b>{class_count[0] - class_count[1]} из {class_count[0]}</b>'
                                        f'{absent_message}', parse_mode='HTML')
     await bot.send_message(cq.from_user.id, 'Выберите класс:', reply_markup=keyboard.classes())
@@ -127,10 +127,11 @@ async def get_codes(cq: types.CallbackQuery):
         index = int(cq.data.split('_')[1])
         all_lessons = crud.get_lesson_today(index)
         lessons = [crud.get_classes_by_id(lesson[2]) for lesson in all_lessons]
-        lessons.sort(key = lambda x: x[1])
-        lessons = [f'{lesson[1]}{lesson[2]}' for lesson in lessons]
+        lessons = [[lesson[0], lesson[1]] for lesson in lessons]
         teachers = [crud.get_user(edu_id=lesson[0]).get_name() for lesson in all_lessons]
-        users = [f'{lessons[i]} {teachers[i]}' for i in range(len(teachers))]
+        data = [[lessons[i][0], lessons[i][1], teachers[i]] for i in range(len(teachers))]
+        data.sort()
+        users = [f'{data[i][1]}{data[i][2]} {data[i][2]}' for i in range(len(data))]
         text = '\n'.join(users)
         await bot.send_message(cq.from_user.id, text, reply_markup=keyboard.lessons_panel())
         await bot.delete_message(chat_id=cq.from_user.id, message_id=cq.message.message_id)

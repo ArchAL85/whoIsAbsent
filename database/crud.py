@@ -287,10 +287,10 @@ def delete_absent(user_id):
 
 
 def get_classes_by_id(class_id):
-    """Получить классов (id, класс, буква) по ID"""
+    """Получить классов (класс, буква, id) по ID"""
     session = SessionLocal()
     classes = session.query(Classes).filter(Classes.class_id == class_id).first()
-    return classes.class_id, classes.number, classes.literal
+    return classes.number, classes.literal, classes.class_id
 
 
 def get_absent_users_by_class(class_id):
