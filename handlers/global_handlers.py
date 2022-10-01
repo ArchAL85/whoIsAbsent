@@ -127,7 +127,7 @@ async def get_codes(cq: types.CallbackQuery):
         index = int(cq.data.split('_')[1])
         all_lessons = crud.get_lesson_today(index)
         lessons = [crud.get_classes_by_id(lesson[2]) for lesson in all_lessons]
-        lessons.sort()
+        lessons.sort(key = lambda x: x[1])
         lessons = [f'{lesson[1]}{lesson[2]}' for lesson in lessons]
         teachers = [crud.get_user(edu_id=lesson[0]).get_name() for lesson in all_lessons]
         users = [f'{lessons[i]} {teachers[i]}' for i in range(len(teachers))]
