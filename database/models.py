@@ -129,6 +129,8 @@ class Task(Base):
     client_id = Column(Integer, ForeignKey("Users.user_id"), nullable=False)
     end_date = Column(DateTime)
     employee = Column(Integer, ForeignKey("Users.user_id"))
+    description = Column(String, nullable=False)
+    role = Column(Integer)
 
 
 # Base.metadata.create_all(engine)

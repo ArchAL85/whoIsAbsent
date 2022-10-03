@@ -219,7 +219,8 @@ def create_code_for_auth():
     session = SessionLocal()
     users = session.query(Users)
     for user in users:
-        users.filter(Users.edu_tatar_id == user.edu_tatar_id, Users.telegram_id == None).update({'code': generate_code()})
+        users.filter(Users.edu_tatar_id == user.edu_tatar_id, Users.telegram_id == None).update(
+            {'code': generate_code()})
     session.commit()
 
 
@@ -278,8 +279,12 @@ def save_absent(reason_id, user_id):
     session.refresh(absent)
 
 
-def delete_absent(user_id):
-    """Удаление отсутствующего"""
+def delete_absent(user_id) -> None:
+    """
+    Удаление информации об отсутствии ученика
+    :param user_id:
+    :return:
+    """
     session = SessionLocal()
     session.query(Absents).filter(func.date(Absents.date) == datetime.now().date(), Absents.user_id == user_id) \
         .delete(synchronize_session=False)
@@ -332,6 +337,54 @@ def get_lesson_today(index: int):
     lessons = session.query(Schedule).filter(Schedule.index_number == index,
                                              Schedule.day_of_week == day[datetime.weekday(current_day)]).all()
     return [[lesson.teacher_id, get_telegram_id(lesson.teacher_id), lesson.class_id] for lesson in lessons]
+
+
+def get_master() -> (Role,):
+    """
+    Возвращает список ролей технического персонала
+    :return:
+    """
+    session = SessionLocal()
+    return session.query(Role).filter(Role.role_id > 10, Role.role_id < 20).all()
+
+
+def save_task(text: str, telegram_id: int, role: int) -> bool:
+    session = SessionLocal()
+    user = session.query(Users).filter(Users.telegram_id == telegram_id).first()
+    task = Task(start_date=datetime.now(), client_id=user.user_id, description=text, role=role)
+    try:
+        session.add(task)
+        session.commit()
+        return True
+    except Exception as e:
+        return False
+
+
+def get_tasks_by_telegram_id(telegram_id: int) -> (Task, ):
+    session = SessionLocal()
+    user = session.query(Users).filter(Users.telegram_id == telegram_id).first()
+    return session.query(Task).filter(Task.client_id == user.user_id, Task.end_date == None).all()
+
+
+def delete_task(task_id: int) -> None:
+    """
+    Удаление задания, если оно ещё не выполнено.
+    :param task_id:
+    :return:
+    """
+    session = SessionLocal()
+    session.query(Task).filter(Task.task_id == task_id, Task.end_date == None).delete(synchronize_session=False)
+    session.commit()
+
+
+def get_role(role_id: int) -> Role:
+    """
+    Получить роль по её номеру
+    :param role_id:
+    :return:
+    """
+    session = SessionLocal()
+    return session.query(Role).filter(Role.role_id == role_id).first()
 
 
 # add_role_reasons()

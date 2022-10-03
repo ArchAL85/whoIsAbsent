@@ -145,3 +145,57 @@ def lessons_panel() -> InlineKeyboardMarkup:
             callback_data=f"to_main")
     )
     return kb
+
+
+def kb_master() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardMarkup(row_width=2)
+    masters = crud.get_master()
+
+    buttons = [
+        InlineKeyboardButton(
+            text=f'{master.title}',
+            callback_data=f"master_{master.role_id}"
+        ) for master in masters
+        ]
+    kb.add(*buttons)
+    kb.add(
+        InlineKeyboardButton(
+            text=f'Отправленные задачи',
+            callback_data=f"task_list")
+    )
+    kb.add(
+        InlineKeyboardButton(
+            text=f'⬅ Назад',
+            callback_data=f"to_main")
+    )
+    return kb
+
+
+def task_list(task_id: int) -> InlineKeyboardMarkup:
+    kb = InlineKeyboardMarkup(row_width=2)
+    kb.add(
+        InlineKeyboardButton(
+            text=f'Отменить заявку',
+            callback_data=f"delete_task_{task_id}")
+    )
+    return kb
+
+
+def task_go_back() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardMarkup()
+    kb.add(
+        InlineKeyboardButton(
+            text=f'⬅ Назад',
+            callback_data=f"task_to_main")
+    )
+    return kb
+
+
+def go_back() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardMarkup(row_width=2)
+    kb.add(
+        InlineKeyboardButton(
+            text=f'⬅ Назад',
+            callback_data=f"to_main")
+    )
+    return kb
