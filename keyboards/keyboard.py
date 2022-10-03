@@ -199,3 +199,24 @@ def go_back() -> InlineKeyboardMarkup:
             callback_data=f"to_main")
     )
     return kb
+
+
+def blocks() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardMarkup(row_width=3)
+    kb.add(
+        InlineKeyboardButton(
+            text=f'А',
+            callback_data=f"cab_a"),
+        InlineKeyboardButton(
+            text=f'Б',
+            callback_data=f"cab_b"),
+        InlineKeyboardButton(
+            text=f'В',
+            callback_data=f"cab_c"),
+    )
+    kb.add(
+        InlineKeyboardButton(
+            text=f'⬅ Назад',
+            callback_data=f"to_main")
+    )
+    return kb

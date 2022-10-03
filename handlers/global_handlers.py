@@ -176,16 +176,36 @@ async def get_codes(message: types.Message):
 
 
 @dp.callback_query_handler(ChatTypeFilter(chat_type=types.ChatType.PRIVATE), text_startswith='master_', state='*')
-async def master_panel(cq: types.CallbackQuery, state: FSMContext):
+async def get_block(cq: types.CallbackQuery, state: FSMContext):
     master = cq.data.split('_')[1]
-    await state.set_state(BotStates.wait_for_task.state)
-    message = await bot.send_message(cq.from_user.id, 'Опишите суть проблемы и потом отправьте её')
+    await state.update_data(master=int(master))
+    await bot.send_message(cq.from_user.id, 'Выберите блок:', reply_markup=keyboard.blocks())
     await bot.delete_message(chat_id=cq.from_user.id, message_id=cq.message.message_id)
-    await state.update_data(master=int(master), message_id=message.message_id)
+
+
+@dp.callback_query_handler(ChatTypeFilter(chat_type=types.ChatType.PRIVATE), text_startswith='cab_', state='*')
+async def get_cab(cq: types.CallbackQuery, state: FSMContext):
+    block = cq.data.split('_')[1]
+    await state.update_data(block=block)
+    mes = await bot.send_message(cq.from_user.id, 'Введите номер кабинета или пояснение')
+    await state.set_state(BotStates.task_cabinet.state)
+    await state.update_data(message_id=mes.message_id)
+    await bot.delete_message(chat_id=cq.from_user.id, message_id=cq.message.message_id)
+
+
+@dp.message_handler(ChatTypeFilter(chat_type=types.ChatType.PRIVATE), state=BotStates.task_cabinet)
+async def master_panel(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    await state.update_data(cabinet=message.text)
+    await state.set_state(BotStates.wait_for_task.state)
+    mes = await bot.send_message(message.from_user.id, 'Опишите суть проблемы и потом отправьте её')
+    await bot.delete_message(chat_id=message.from_user.id, message_id=data['message_id'])
+    await state.update_data(message_id=mes.message_id)
 
 
 @dp.message_handler(ChatTypeFilter(chat_type=types.ChatType.PRIVATE), state=BotStates.wait_for_task)
 async def try_to_save_task(message: types.Message, state: FSMContext):
+    correct_block = {'a': 'А', 'b': 'Б', 'c': 'В'}
     data = await state.get_data()
     if crud.save_task(message.text, message.from_user.id, data['master']):
         await message.answer('Ваша заявка принята')
@@ -195,6 +215,8 @@ async def try_to_save_task(message: types.Message, state: FSMContext):
             await bot.send_message(x_id, f'Заявка от: <b>{user.get_name()}</b>\n'
                                          f'Дата заявки: <b>{datetime.datetime.now().strftime("%d.%m.%y %H:%M")}</b>\n'
                                          f'Кому: <b>{role.title}</b>\n'
+                                         f'Блок: <b>{correct_block[data["block"]]}</b>\n'
+                                         f'Кабинет: <b>{data["cabinet"]}</b>\n'
                                          f'Описание: {message.text}')
         await bot.delete_message(chat_id=message.from_user.id, message_id=data['message_id'])
         await bot.send_message(message.from_user.id, 'Хотите оставить ещё одну заявку?',

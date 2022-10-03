@@ -12,3 +12,4 @@ class BotStates(StatesGroup):
     absent_menu = State()
     admin_menu = State()
     all_task = State()
+    task_cabinet = State()
