@@ -96,8 +96,8 @@ def first_lesson(class_) -> InlineKeyboardMarkup:
     button = crud.get_classes_by_id(class_)
     kb.add(
         InlineKeyboardButton(
-            text=f'Отметить отсутствующих в {button[1]}{button[2]}',
-            callback_data=f"class_{button[0]}"
+            text=f'Отметить отсутствующих в {button[0]}{button[1]}',
+            callback_data=f"class_{button[2]}"
         ))
     kb.add(
         InlineKeyboardButton(

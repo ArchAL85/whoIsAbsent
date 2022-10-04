@@ -21,7 +21,7 @@ async def remember():
 
 
 async def scheduler():
-    aioschedule.every().day.at("07:59").do(remember)
+    aioschedule.every().day.at("08:38").do(remember)
     while True:
         await aioschedule.run_pending()
         await asyncio.sleep(1)
@@ -29,6 +29,7 @@ async def scheduler():
 
 async def on_startup(dp):
     asyncio.create_task(scheduler())
+
 
 if __name__ == '__main__':
     executor.start_polling(dp, on_startup=on_startup, skip_updates=True)
