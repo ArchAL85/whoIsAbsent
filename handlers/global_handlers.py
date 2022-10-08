@@ -318,6 +318,8 @@ async def cancel_task(cq: types.CallbackQuery, state: FSMContext):
 async def set_employee_for_task(cq: types.CallbackQuery):
     _, user_id, task_id = cq.data.split('_')
     crud.update_task(int(task_id), int(user_id))
+    user = crud.get_user(user_id=user_id)
+    await bot.send_message(user.telegram_id, cq.message.text)
     await bot.delete_message(chat_id=cq.from_user.id, message_id=cq.message.message_id)
 
 
