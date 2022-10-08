@@ -18,7 +18,7 @@ from states.bot_state import BotStates
 morph = pymorphy2.MorphAnalyzer()
 
 
-@dp.message_handler(ChatTypeFilter(chat_type=types.ChatType.PRIVATE), commands=["start"])
+@dp.message_handler(ChatTypeFilter(chat_type=types.ChatType.PRIVATE), commands=["start"], state='*')
 async def start(message: types.Message, state: FSMContext):
     get_code = message.text.split()
     if crud.user_by_telegram_id(message.from_user.id):
