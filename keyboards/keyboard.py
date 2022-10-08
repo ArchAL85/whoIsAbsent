@@ -277,6 +277,18 @@ def task_keyboard(task_id: int) -> InlineKeyboardMarkup:
     return kb
 
 
+def employee_complete(task_id: int) -> InlineKeyboardMarkup:
+    kb = InlineKeyboardMarkup()
+    master = crud.get_task(task_id)
+    kb.add(
+        InlineKeyboardButton(
+            text='Выполнено',
+            callback_data=f'complete_{master.employee}_{task_id}'
+        )
+    )
+    return kb
+
+
 def cancle() -> InlineKeyboardMarkup:
     kb = InlineKeyboardMarkup()
     kb.add(
