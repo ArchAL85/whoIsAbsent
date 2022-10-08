@@ -117,6 +117,10 @@ def admin_panel() -> InlineKeyboardMarkup:
         InlineKeyboardButton(
             text=f'Отчёты',
             callback_data=f"admin_reports"
+        ),
+        InlineKeyboardButton(
+            text=f'Заявки',
+            callback_data=f"admin_tasks"
         )
     )
     kb.add(
@@ -150,11 +154,10 @@ def lessons_panel() -> InlineKeyboardMarkup:
 def kb_master() -> InlineKeyboardMarkup:
     kb = InlineKeyboardMarkup(row_width=2)
     masters = crud.get_master()
-
     buttons = [
         InlineKeyboardButton(
             text=f'{master.title}',
-            callback_data=f"master_{master.role_id}"
+            callback_data=f"master_{master.role_id}_{(crud.get_master_by_role(master.role_id))[0].user_id}"
         ) for master in masters
         ]
     kb.add(*buttons)
@@ -218,5 +221,68 @@ def blocks() -> InlineKeyboardMarkup:
         InlineKeyboardButton(
             text=f'⬅ Назад',
             callback_data=f"to_main")
+    )
+    return kb
+
+
+def admin_task_panel() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardMarkup()
+    kb.add(
+        InlineKeyboardButton(
+            text=f'Список задач',
+            callback_data=f"tadmin_current"
+        )
+    )
+    kb.add(
+        InlineKeyboardButton(
+            text=f'Скачать отчёт',
+            callback_data=f"tadmin_report"
+        )
+    )
+    kb.add(
+        InlineKeyboardButton(
+            text=f'Отчёт за месяц',
+            callback_data=f"tadmin_month"
+        )
+    )
+    kb.add(
+        InlineKeyboardButton(
+            text=f'⬅ Назад',
+            callback_data=f"main_admin"),
+        InlineKeyboardButton(
+            text=f'В начало',
+            callback_data=f"to_main")
+    )
+    return kb
+
+
+def task_keyboard(task_id: int) -> InlineKeyboardMarkup:
+    kb = InlineKeyboardMarkup(row_width=2)
+    masters = crud.get_all_masters()
+    buttons = []
+    for master in masters:
+        buttons.append(InlineKeyboardButton(
+            text=f'{master.get_name()}',
+            callback_data=f"employee_{master.user_id}_{task_id}"
+        )
+        )
+    kb.add(*buttons)
+    master = crud.get_task(task_id)
+    kb.add(
+        InlineKeyboardButton(
+            text='Выполнено',
+            callback_data=f'complete_{master.employee}_{task_id}'
+        )
+    )
+    return kb
+
+
+def cancle() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardMarkup()
+    kb.add(
+        InlineKeyboardButton(
+            text='Отменить',
+            callback_data=f'cancel_task'
+        )
     )
     return kb

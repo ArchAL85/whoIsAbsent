@@ -1,5 +1,8 @@
 import datetime
+import logging
+
 from sqlalchemy import or_, and_, func
+from sqlalchemy.inspection import inspect
 from datetime import date
 
 from database.db import SessionLocal
@@ -348,16 +351,47 @@ def get_master() -> (Role,):
     return session.query(Role).filter(Role.role_id > 10, Role.role_id < 20).all()
 
 
-def save_task(text: str, telegram_id: int, role: int) -> bool:
+def get_master_by_role(role: int) -> (Users,):
+    """
+    Возвращает список мастеров, кому можно адресовать задачу
+    :param role:
+    :return:
+    """
+    session = SessionLocal()
+    return session.query(Users).join(User_role).filter(User_role.role_id == role).all()
+
+
+def get_all_masters() -> (Users,):
+    """
+    Возвращает список всех мастеров
+    :return:
+    """
+    session = SessionLocal()
+    return session.query(Users).join(User_role).filter(User_role.role_id > 10, User_role.role_id < 20).all()
+
+
+def save_task(text: str, telegram_id: int, role: int, block: str, cabinet: str, employee: int) -> int:
+    """
+    Сохранение задачи
+    :param text:
+    :param telegram_id:
+    :param role:
+    :param block:
+    :param cabinet:
+    :param employee:
+    :return:
+    """
     session = SessionLocal()
     user = session.query(Users).filter(Users.telegram_id == telegram_id).first()
-    task = Task(start_date=datetime.now(), client_id=user.user_id, description=text, role=role)
+    task = Task(start_date=datetime.now(), client_id=user.user_id, description=text, role=role,
+                block=block, cabinet=cabinet, employee=employee)
     try:
         session.add(task)
         session.commit()
-        return True
+        return task.task_id
     except Exception as e:
-        return False
+        logging.info(e)
+        return 0
 
 
 def get_tasks_by_telegram_id(telegram_id: int) -> (Task, ):
@@ -385,6 +419,47 @@ def get_role(role_id: int) -> Role:
     """
     session = SessionLocal()
     return session.query(Role).filter(Role.role_id == role_id).first()
+
+
+def get_all_task() -> (Task, ):
+    """
+    Получить все задачи
+    :return:
+    """
+    session = SessionLocal()
+    return session.query(Task).filter(Task.end_date == None).all()
+
+
+def get_task(task_id:int) -> Task:
+    """
+    
+    :param task_id: 
+    :return: 
+    """
+    session = SessionLocal()
+    return session.query(Task).filter(Task.task_id == task_id).first()
+
+
+def update_task(task_id: int, user_id: int, complete=False) -> bool:
+    """
+    Изменяет значения для таски
+    :param task_id:
+    :param user_id:
+    :param complete:
+    :return:
+    """
+    cur_date = None
+    if complete:
+        cur_date = datetime.now()
+    session = SessionLocal()
+    task = session.query(Task).filter(Task.task_id == task_id)
+    curr_task = task.first()
+    if curr_task:
+        task.update({'employee': user_id, 'end_date': cur_date})
+        session.commit()
+        return True
+    else:
+        return False
 
 
 # add_role_reasons()

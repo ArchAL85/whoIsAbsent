@@ -1,4 +1,5 @@
 import datetime
+import logging
 
 from aiogram.dispatcher.filters import ChatTypeFilter
 from aiogram.dispatcher import FSMContext
@@ -163,6 +164,8 @@ async def admin_panel(cq: types.CallbackQuery, state: FSMContext):
     if status == 'reports':
         await bot.send_message(cq.from_user.id, 'Раздел в разработке.\n'
                                                 'Выберите действие:', reply_markup=keyboard.admin_panel())
+    if status == 'tasks':
+        await bot.send_message(cq.from_user.id, 'Выберите действие:', reply_markup=keyboard.admin_task_panel())
     await state.set_state(BotStates.admin_menu.state)
     await bot.delete_message(chat_id=cq.from_user.id, message_id=cq.message.message_id)
 
@@ -177,8 +180,8 @@ async def get_codes(message: types.Message):
 
 @dp.callback_query_handler(ChatTypeFilter(chat_type=types.ChatType.PRIVATE), text_startswith='master_', state='*')
 async def get_block(cq: types.CallbackQuery, state: FSMContext):
-    master = cq.data.split('_')[1]
-    await state.update_data(master=int(master))
+    _, master, user = cq.data.split('_')
+    await state.update_data(master=int(master), employee=int(user))
     await bot.send_message(cq.from_user.id, 'Выберите блок:', reply_markup=keyboard.blocks())
     await bot.delete_message(chat_id=cq.from_user.id, message_id=cq.message.message_id)
 
@@ -207,7 +210,9 @@ async def master_panel(message: types.Message, state: FSMContext):
 async def try_to_save_task(message: types.Message, state: FSMContext):
     correct_block = {'a': 'А', 'b': 'Б', 'c': 'В'}
     data = await state.get_data()
-    if crud.save_task(message.text, message.from_user.id, data['master']):
+    last_id = crud.save_task(message.text, message.from_user.id, data['master'],
+                             correct_block[data["block"]], data["cabinet"], data["employee"])
+    if bool(last_id):
         await message.answer('Ваша заявка принята')
         role = crud.get_role(data['master'])
         for x_id in task_admins:
@@ -217,7 +222,7 @@ async def try_to_save_task(message: types.Message, state: FSMContext):
                                          f'Кому: <b>{role.title}</b>\n'
                                          f'Блок: <b>{correct_block[data["block"]]}</b>\n'
                                          f'Кабинет: <b>{data["cabinet"]}</b>\n'
-                                         f'Описание: {message.text}')
+                                         f'Описание: {message.text}', reply_markup=keyboard.task_keyboard(last_id))
         await bot.delete_message(chat_id=message.from_user.id, message_id=data['message_id'])
         await bot.send_message(message.from_user.id, 'Хотите оставить ещё одну заявку?',
                                reply_markup=keyboard.kb_master())
@@ -266,3 +271,58 @@ async def delete_task(cq: types.CallbackQuery, state: FSMContext):
                            reply_markup=keyboard.kb_master())
 
 
+@dp.callback_query_handler(ChatTypeFilter(chat_type=types.ChatType.PRIVATE), text_startswith='tadmin_', state='*')
+async def admin_task(cq: types.CallbackQuery, state: FSMContext):
+    task = cq.data.split('_')[1]
+    await state.update_data(message_id=[])
+    if task == 'current':
+        tasks = crud.get_all_task()
+        for one in tasks:
+            data = await state.get_data()
+            user = crud.get_user(user_id=one.client_id)
+            role = crud.get_role(one.role)
+            text = f'Заявка от: <b>{user.get_name()}</b>\n' \
+                   f'Дата заявки: <b>{one.start_date.strftime("%d.%m.%y %H:%M")}</b>\n' \
+                   f'Кому: <b>{role.title}</b>\n' \
+                   f'Блок: <b>{one.block}</b>\n' \
+                   f'Кабинет: <b>{one.cabinet}</b>\n' \
+                   f'Описание: {one.description}'
+            x = await bot.send_message(cq.from_user.id, text,
+                                       reply_markup=keyboard.task_keyboard(one.task_id))
+            data['message_id'].append(x.message_id)
+            await state.update_data(message_id=data['message_id'])
+        await bot.send_message(cq.from_user.id, 'Выберите действие выше или нажмите на отмену',
+                               reply_markup=keyboard.cancle())
+    elif task == 'report':
+        pass
+    elif task == 'month':
+        pass
+    await bot.delete_message(chat_id=cq.from_user.id, message_id=cq.message.message_id)
+
+
+@dp.callback_query_handler(ChatTypeFilter(chat_type=types.ChatType.PRIVATE), text_startswith='cancel_', state='*')
+async def cancel_task(cq: types.CallbackQuery, state: FSMContext):
+    task = cq.data.split('_')[1]
+    if task == 'task':
+        data = await state.get_data()
+        for message_id in data['message_id']:
+            try:
+                await bot.delete_message(chat_id=cq.from_user.id, message_id=message_id)
+            except Exception as e:
+                logging.info(e)
+    await bot.delete_message(chat_id=cq.from_user.id, message_id=cq.message.message_id)
+    await bot.send_message(cq.from_user.id, 'Выберите действие:', reply_markup=keyboard.admin_task_panel())
+
+
+@dp.callback_query_handler(ChatTypeFilter(chat_type=types.ChatType.PRIVATE), text_startswith='employee_', state='*')
+async def set_employee_for_task(cq: types.CallbackQuery):
+    _, user_id, task_id = cq.data.split('_')
+    crud.update_task(int(task_id), int(user_id))
+    await bot.delete_message(chat_id=cq.from_user.id, message_id=cq.message.message_id)
+
+
+@dp.callback_query_handler(ChatTypeFilter(chat_type=types.ChatType.PRIVATE), text_startswith='complete', state='*')
+async def complete_for_task(cq: types.CallbackQuery):
+    _, user_id, task_id = cq.data.split('_')
+    crud.update_task(int(task_id), int(user_id), True)
+    await bot.delete_message(chat_id=cq.from_user.id, message_id=cq.message.message_id)

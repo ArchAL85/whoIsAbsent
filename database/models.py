@@ -131,6 +131,8 @@ class Task(Base):
     employee = Column(Integer, ForeignKey("Users.user_id"))
     description = Column(String, nullable=False)
     role = Column(Integer)
+    block = Column(VARCHAR(1))
+    cabinet = Column(VARCHAR(50))
 
 
 # Base.metadata.create_all(engine)
