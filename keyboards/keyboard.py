@@ -229,20 +229,20 @@ def admin_task_panel() -> InlineKeyboardMarkup:
     kb = InlineKeyboardMarkup()
     kb.add(
         InlineKeyboardButton(
-            text=f'Список задач',
+            text=f'Список текущих задач',
             callback_data=f"tadmin_current"
         )
     )
     kb.add(
         InlineKeyboardButton(
-            text=f'Скачать отчёт',
-            callback_data=f"tadmin_report"
+            text=f'Задачи в работе',
+            callback_data=f"tadmin_work"
         )
     )
     kb.add(
         InlineKeyboardButton(
-            text=f'Отчёт за месяц',
-            callback_data=f"tadmin_month"
+            text=f'Отложенные задачи',
+            callback_data=f"tadmin_postponed"
         )
     )
     kb.add(
@@ -278,12 +278,16 @@ def task_keyboard(task_id: int) -> InlineKeyboardMarkup:
 
 
 def employee_complete(task_id: int) -> InlineKeyboardMarkup:
-    kb = InlineKeyboardMarkup()
+    kb = InlineKeyboardMarkup(row_width=1)
     master = crud.get_task(task_id)
     kb.add(
         InlineKeyboardButton(
             text='Выполнено',
             callback_data=f'complete_{master.employee}_{task_id}'
+        ),
+        InlineKeyboardButton(
+            text='Отложить',
+            callback_data=f'postponed_{master.employee}_{task_id}'
         )
     )
     return kb
@@ -296,5 +300,21 @@ def cancle() -> InlineKeyboardMarkup:
             text='Отменить',
             callback_data=f'cancel_task'
         )
+    )
+    return kb
+
+
+def report_panel() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardMarkup(row_width=1)
+    kb.add(
+        InlineKeyboardButton(
+            text=f'Отчёт по заявкам',
+            callback_data=f"treport"),
+        InlineKeyboardButton(
+            text=f'⬅ Назад',
+            callback_data=f"main_admin"),
+        InlineKeyboardButton(
+            text=f'В начало',
+            callback_data=f"to_main")
     )
     return kb

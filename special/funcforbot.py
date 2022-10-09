@@ -1,3 +1,4 @@
+import openpyxl as openpyxl
 from docxtpl import DocxTemplate
 import datetime as dt
 import random
@@ -50,3 +51,34 @@ def create_report():
     file_name = f'{dt.datetime.now().strftime("%d.%m.%Y")}.docx'
     doc.save(file_name)
     return file_name
+
+
+def create_task_report():
+    wb = openpyxl.load_workbook('special/report.xlsx')
+    tasks = crud.get_all_task('all')
+    months = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+              'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь']
+    for task in tasks:
+        sheet = months[int(task.start_date.strftime("%m")) - 1]
+        if sheet not in wb.sheetnames:
+            source = wb.get_sheet_by_name('Шаблон')
+            target = wb.copy_worksheet(source)
+            target.title = sheet
+        wb.active = wb.get_sheet_by_name(sheet)
+        ws = wb.active
+        row = ws.max_row + 1
+        ws.cell(column=1, row=row, value=f'{task.start_date.strftime("%d.%m.%Y %H:%M")}')
+        user = crud.get_user(user_id=task.client_id)
+        ws.cell(column=2, row=row, value=f'{user.get_full_name()}')
+        ws.cell(column=3, row=row, value=f'{task.block}')
+        ws.cell(column=4, row=row, value=f'{task.cabinet}')
+        ws.cell(column=5, row=row, value=f'{task.description}')
+        user = crud.get_user(user_id=task.employee)
+        ws.cell(column=6, row=row, value=f'{user.get_full_name()}')
+        ws.cell(column=7, row=row, value=f'{task.end_date}')
+        ws.cell(column=8, row=row, value=f'{task.postponed}')
+    wb.remove_sheet(wb.get_sheet_by_name('Шаблон'))
+    file_name = f'complete.xlsx'
+    wb.save(filename=file_name)
+    return file_name
+

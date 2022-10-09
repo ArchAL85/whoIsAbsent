@@ -133,6 +133,8 @@ class Task(Base):
     role = Column(Integer)
     block = Column(VARCHAR(1))
     cabinet = Column(VARCHAR(50))
+    get_date = Column(DateTime)
+    postponed = Column(String)
 
 
 # Base.metadata.create_all(engine)

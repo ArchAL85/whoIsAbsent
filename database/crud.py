@@ -421,13 +421,19 @@ def get_role(role_id: int) -> Role:
     return session.query(Role).filter(Role.role_id == role_id).first()
 
 
-def get_all_task() -> (Task, ):
+def get_all_task(*args) -> (Task, ):
     """
     Получить все задачи
     :return:
     """
     session = SessionLocal()
-    return session.query(Task).filter(Task.end_date == None).all()
+    if 'postponed' in args:
+        return session.query(Task).filter(Task.end_date == None, Task.postponed != None).all()
+    if 'work' in args:
+        return session.query(Task).filter(Task.end_date == None, Task.get_date != None, Task.postponed == None).all()
+    if 'all' in args:
+        return session.query(Task).all()
+    return session.query(Task).filter(Task.end_date == None, Task.postponed == None, Task.get_date == None).all()
 
 
 def get_task(task_id:int) -> Task:
@@ -440,27 +446,50 @@ def get_task(task_id:int) -> Task:
     return session.query(Task).filter(Task.task_id == task_id).first()
 
 
-def update_task(task_id: int, user_id: int, complete=False) -> bool:
+def update_task(task_id: int, user_id: int, in_work=False, complete=False) -> bool:
     """
     Изменяет значения для таски
     :param task_id:
     :param user_id:
+    :param in_work:
     :param complete:
     :return:
     """
     cur_date = None
+    cur_work = None
     if complete:
         cur_date = datetime.now()
+    if in_work:
+        cur_work = datetime.now()
     session = SessionLocal()
     task = session.query(Task).filter(Task.task_id == task_id)
     curr_task = task.first()
     if curr_task:
-        task.update({'employee': user_id, 'end_date': cur_date})
+        task.update({'employee': user_id, 'end_date': cur_date, 'get_date': cur_work})
         session.commit()
         return True
     else:
         return False
 
+
+def postponed_task(reason: str, task_id: int) -> Task:
+    """
+    Отложенная задача
+    :param reason:
+    :param user_id:
+    :param task_id:
+    :return:
+    """
+    session = SessionLocal()
+    task = session.query(Task).filter(Task.task_id == task_id)
+    curr_task = task.first()
+    if curr_task:
+        task.update({'postponed': reason})
+        session.commit()
+        session.refresh(curr_task)
+        return curr_task
+    else:
+        return curr_task
 
 # add_role_reasons()
 # load_data_from_edu_tatar()

@@ -13,3 +13,4 @@ class BotStates(StatesGroup):
     admin_menu = State()
     all_task = State()
     task_cabinet = State()
+    postponed = State()

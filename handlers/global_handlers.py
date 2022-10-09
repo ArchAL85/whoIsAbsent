@@ -12,7 +12,7 @@ import pymorphy2
 from config import admins, super_admins, info_group, GLOBAL_SET, task_admins
 import messages
 from keyboards import keyboard
-from special.funcforbot import create_report
+from special.funcforbot import create_report, create_task_report
 from states.bot_state import BotStates
 
 morph = pymorphy2.MorphAnalyzer()
@@ -162,8 +162,7 @@ async def admin_panel(cq: types.CallbackQuery, state: FSMContext):
     if status == 'lessons':
         await bot.send_message(cq.from_user.id, 'Выберите номер урока:', reply_markup=keyboard.lessons_panel())
     if status == 'reports':
-        await bot.send_message(cq.from_user.id, 'Раздел в разработке.\n'
-                                                'Выберите действие:', reply_markup=keyboard.admin_panel())
+        await bot.send_message(cq.from_user.id, 'Выберите действие:', reply_markup=keyboard.report_panel())
     if status == 'tasks':
         await bot.send_message(cq.from_user.id, 'Выберите действие:', reply_markup=keyboard.admin_task_panel())
     await state.set_state(BotStates.admin_menu.state)
@@ -215,14 +214,15 @@ async def try_to_save_task(message: types.Message, state: FSMContext):
     if bool(last_id):
         await message.answer('Ваша заявка принята')
         role = crud.get_role(data['master'])
+        user = crud.get_user(telegram_id=message.from_user.id)
+        text = f'Заявка от: <b>{user.get_name()}</b>\n' \
+               f'Дата заявки: <b>{datetime.datetime.now().strftime("%d.%m.%y %H:%M")}</b>\n' \
+               f'Кому: <b>{role.title}</b>\n'\
+               f'Блок: <b>{correct_block[data["block"]]}</b>\n'\
+               f'Кабинет: <b>{data["cabinet"]}</b>\n'\
+               f'Описание: {message.text}'
         for x_id in task_admins:
-            user = crud.get_user(telegram_id=message.from_user.id)
-            await bot.send_message(x_id, f'Заявка от: <b>{user.get_name()}</b>\n'
-                                         f'Дата заявки: <b>{datetime.datetime.now().strftime("%d.%m.%y %H:%M")}</b>\n'
-                                         f'Кому: <b>{role.title}</b>\n'
-                                         f'Блок: <b>{correct_block[data["block"]]}</b>\n'
-                                         f'Кабинет: <b>{data["cabinet"]}</b>\n'
-                                         f'Описание: {message.text}', reply_markup=keyboard.task_keyboard(last_id))
+            await bot.send_message(x_id, text, reply_markup=keyboard.task_keyboard(last_id))
         await bot.delete_message(chat_id=message.from_user.id, message_id=data['message_id'])
         await bot.send_message(message.from_user.id, 'Хотите оставить ещё одну заявку?',
                                reply_markup=keyboard.kb_master())
@@ -260,7 +260,7 @@ async def delete_task(cq: types.CallbackQuery, state: FSMContext):
 
 @dp.callback_query_handler(ChatTypeFilter(chat_type=types.ChatType.PRIVATE), text_startswith='task_to_main',
                            state=BotStates.all_task)
-async def delete_task(cq: types.CallbackQuery, state: FSMContext):
+async def delete_all_task(cq: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
     for x in data['messages_id']:
         await bot.delete_message(chat_id=cq.from_user.id, message_id=x)
@@ -275,28 +275,26 @@ async def delete_task(cq: types.CallbackQuery, state: FSMContext):
 async def admin_task(cq: types.CallbackQuery, state: FSMContext):
     task = cq.data.split('_')[1]
     await state.update_data(message_id=[])
-    if task == 'current':
-        tasks = crud.get_all_task()
-        for one in tasks:
-            data = await state.get_data()
-            user = crud.get_user(user_id=one.client_id)
-            role = crud.get_role(one.role)
-            text = f'Заявка от: <b>{user.get_name()}</b>\n' \
-                   f'Дата заявки: <b>{one.start_date.strftime("%d.%m.%y %H:%M")}</b>\n' \
-                   f'Кому: <b>{role.title}</b>\n' \
-                   f'Блок: <b>{one.block}</b>\n' \
-                   f'Кабинет: <b>{one.cabinet}</b>\n' \
-                   f'Описание: {one.description}'
-            x = await bot.send_message(cq.from_user.id, text,
-                                       reply_markup=keyboard.task_keyboard(one.task_id))
-            data['message_id'].append(x.message_id)
-            await state.update_data(message_id=data['message_id'])
-        await bot.send_message(cq.from_user.id, 'Выберите действие выше или нажмите на отмену',
-                               reply_markup=keyboard.cancle())
-    elif task == 'report':
-        pass
-    elif task == 'month':
-        pass
+    tasks = crud.get_all_task(task)
+    for one in tasks:
+        data = await state.get_data()
+        user = crud.get_user(user_id=one.client_id)
+        role = crud.get_role(one.role)
+        text = f'Заявка от: <b>{user.get_name()}</b>\n' \
+               f'Дата заявки: <b>{one.start_date.strftime("%d.%m.%y %H:%M")}</b>\n' \
+               f'Кому: <b>{role.title}</b>\n' \
+               f'Блок: <b>{one.block}</b>\n' \
+               f'Кабинет: <b>{one.cabinet}</b>\n' \
+               f'Описание: {one.description}'
+        if task == 'postponed':
+            text += f'\n\n Причина: {one.postponed}'
+        x = await bot.send_message(cq.from_user.id, text,
+                                   reply_markup=keyboard.task_keyboard(one.task_id))
+        data['message_id'].append(x.message_id)
+        await state.update_data(message_id=data['message_id'])
+    await bot.send_message(cq.from_user.id, 'Выберите действие выше или нажмите на отмену',
+                           reply_markup=keyboard.cancle())
+
     await bot.delete_message(chat_id=cq.from_user.id, message_id=cq.message.message_id)
 
 
@@ -317,7 +315,7 @@ async def cancel_task(cq: types.CallbackQuery, state: FSMContext):
 @dp.callback_query_handler(ChatTypeFilter(chat_type=types.ChatType.PRIVATE), text_startswith='employee_', state='*')
 async def set_employee_for_task(cq: types.CallbackQuery):
     _, user_id, task_id = cq.data.split('_')
-    crud.update_task(int(task_id), int(user_id))
+    crud.update_task(int(task_id), int(user_id), in_work=True)
     user = crud.get_user(user_id=user_id)
     await bot.send_message(user.telegram_id, cq.message.text, reply_markup=keyboard.employee_complete(int(task_id)))
     await bot.delete_message(chat_id=cq.from_user.id, message_id=cq.message.message_id)
@@ -326,5 +324,48 @@ async def set_employee_for_task(cq: types.CallbackQuery):
 @dp.callback_query_handler(ChatTypeFilter(chat_type=types.ChatType.PRIVATE), text_startswith='complete', state='*')
 async def complete_for_task(cq: types.CallbackQuery):
     _, user_id, task_id = cq.data.split('_')
-    crud.update_task(int(task_id), int(user_id), True)
+    crud.update_task(int(task_id), int(user_id), complete=True)
+    await bot.delete_message(chat_id=cq.from_user.id, message_id=cq.message.message_id)
+
+
+@dp.callback_query_handler(ChatTypeFilter(chat_type=types.ChatType.PRIVATE), text_startswith='postponed', state='*')
+async def postponed_task(cq: types.CallbackQuery, state: FSMContext):
+    _, user_id, task_id = cq.data.split('_')
+    await bot.send_message(cq.from_user.id, 'Укажите причину, по которой нельзя сейчас выполнить, '
+                                            'и примерные сроки выполнения:')
+    await state.set_state(BotStates.postponed.state)
+    await state.update_data(postponed_task=task_id, master_id=user_id)
+    await bot.delete_message(chat_id=cq.from_user.id, message_id=cq.message.message_id)
+
+
+@dp.message_handler(ChatTypeFilter(chat_type=types.ChatType.PRIVATE), state=BotStates.postponed)
+async def try_to_postponed_task(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    task = crud.postponed_task(message.text, data["postponed_task"])
+    if task:
+        await message.answer('Данные отправлены')
+        client = crud.get_user(user_id=task.client_id)
+        employee = crud.get_user(user_id=data['master_id'])
+        text = f'<b>{employee.get_name()} отложил заявку:</b>\n' \
+               f'Заявка от: <b>{client.get_name()}</b>\n' \
+               f'Дата заявки: <b>{task.start_date.strftime("%d.%m.%y %H:%M")}</b>\n' \
+               f'Блок: <b>{task.block}</b>\n' \
+               f'Кабинет: <b>{task.cabinet}</b>\n' \
+               f'Описание: {task.description}\n\n' \
+               f'Причина: {message.text}'
+        await state.reset_data()
+        await state.reset_state()
+        for x_id in task_admins:
+            await bot.send_message(x_id, text)
+        await bot.send_message()
+
+
+@dp.callback_query_handler(ChatTypeFilter(chat_type=types.ChatType.PRIVATE), text_startswith='treport', state='*')
+async def postponed_task(cq: types.CallbackQuery, state: FSMContext):
+    await bot.send_message(cq.from_user.id, 'Ваш отчёт формируется', reply_markup=keyboard.report_panel())
+    try:
+        with open(create_task_report(), 'rb') as f:
+            await bot.send_document(cq.from_user.id, f)
+    except Exception as e:
+        await bot.send_message(148161847, f'{e}')
     await bot.delete_message(chat_id=cq.from_user.id, message_id=cq.message.message_id)
