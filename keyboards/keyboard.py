@@ -274,6 +274,12 @@ def task_keyboard(task_id: int) -> InlineKeyboardMarkup:
             callback_data=f'complete_{master.employee}_{task_id}'
         )
     )
+    kb.add(
+        InlineKeyboardButton(
+            text='Закрыть',
+            callback_data=f'close'
+        )
+    )
     return kb
 
 

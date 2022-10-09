@@ -74,9 +74,9 @@ def create_task_report():
         ws.cell(column=4, row=row, value=f'{task.cabinet}')
         ws.cell(column=5, row=row, value=f'{task.description}')
         user = crud.get_user(user_id=task.employee)
-        ws.cell(column=6, row=row, value=f'{user.get_full_name()}')
-        ws.cell(column=7, row=row, value=f'{task.end_date}')
-        ws.cell(column=8, row=row, value=f'{task.postponed}')
+        ws.cell(column=6, row=row, value=f'{user.get_full_name() if user else ""}')
+        ws.cell(column=7, row=row, value=f'{task.end_date.strftime("%d.%m.%Y %H:%M") if task.end_date else ""}')
+        ws.cell(column=8, row=row, value=f'{task.postponed if task.postponed else ""}')
     wb.remove_sheet(wb.get_sheet_by_name('Шаблон'))
     file_name = f'complete.xlsx'
     wb.save(filename=file_name)

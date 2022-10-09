@@ -361,11 +361,16 @@ async def try_to_postponed_task(message: types.Message, state: FSMContext):
 
 
 @dp.callback_query_handler(ChatTypeFilter(chat_type=types.ChatType.PRIVATE), text_startswith='treport', state='*')
-async def postponed_task(cq: types.CallbackQuery, state: FSMContext):
+async def postponed_task(cq: types.CallbackQuery):
     await bot.send_message(cq.from_user.id, 'Ваш отчёт формируется', reply_markup=keyboard.report_panel())
     try:
         with open(create_task_report(), 'rb') as f:
             await bot.send_document(cq.from_user.id, f)
     except Exception as e:
         await bot.send_message(148161847, f'{e}')
+    await bot.delete_message(chat_id=cq.from_user.id, message_id=cq.message.message_id)
+
+
+@dp.callback_query_handler(ChatTypeFilter(chat_type=types.ChatType.PRIVATE), text_startswith='close', state='*')
+async def postponed_task(cq: types.CallbackQuery):
     await bot.delete_message(chat_id=cq.from_user.id, message_id=cq.message.message_id)
