@@ -358,7 +358,7 @@ def get_master_by_role(role: int) -> (Users,):
     :return:
     """
     session = SessionLocal()
-    return session.query(Users).join(User_role).filter(User_role.role_id == role).all()
+    return session.query(Users).join(User_role).filter(User_role.role_id == role).order_by(Users.user_id).all()
 
 
 def get_all_masters() -> (Users,):
@@ -384,7 +384,7 @@ def save_task(text: str, telegram_id: int, role: int, block: str, cabinet: str, 
     session = SessionLocal()
     user = session.query(Users).filter(Users.telegram_id == telegram_id).first()
     task = Task(start_date=datetime.now(), client_id=user.user_id, description=text, role=role,
-                block=block, cabinet=cabinet, employee=employee)
+                block=block, cabinet=cabinet, employee=employee, get_date=datetime.now())
     try:
         session.add(task)
         session.commit()

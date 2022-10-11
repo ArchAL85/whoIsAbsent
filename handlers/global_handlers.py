@@ -53,6 +53,23 @@ async def get_class(cq: types.CallbackQuery, state: FSMContext):
     elif status == 'repair':
         await bot.send_message(cq.from_user.id, 'Выберите, кому хотите оставить заявку?',
                                reply_markup=keyboard.kb_master())
+    elif status == 'tasks':
+        tasks = crud.get_tasks_by_telegram_id(cq.from_user.id)
+        await bot.send_message(cq.from_user.id, f'Количество заявок: {len(tasks)}')
+        for task in tasks:
+            user = crud.get_user(user_id=task.client_id)
+            role = crud.get_role(task.role)
+            text = f'Заявка от: <b>{user.get_name()}</b>\n' \
+                   f'Дата заявки: <b>{task.start_date.strftime("%d.%m.%y %H:%M")}</b>\n' \
+                   f'Кому: <b>{role.title}</b>\n' \
+                   f'Блок: <b>{task.block}</b>\n' \
+                   f'Кабинет: <b>{task.cabinet}</b>\n' \
+                   f'Описание: {task.description}'
+            if task.postponed:
+                text += f'\n\n Причина: {task.postponed}'
+            await bot.send_message(cq.from_user.id, text, reply_markup=keyboard.employee_complete(task.task_id))
+        await bot.send_message(cq.from_user.id, 'Выберите действия:',
+                               reply_markup=keyboard.start(cq.from_user.id))
     await bot.delete_message(chat_id=cq.from_user.id, message_id=cq.message.message_id)
 
 
@@ -138,7 +155,7 @@ async def save_absent(cq: types.CallbackQuery, state: FSMContext):
 
 @dp.callback_query_handler(ChatTypeFilter(chat_type=types.ChatType.PRIVATE), text_startswith='lesson_', state='*')
 async def get_lessons(cq: types.CallbackQuery):
-    if cq.from_user.id in admins:
+    if cq.from_user.id in admins or cq.from_user.id in task_admins:
         index = int(cq.data.split('_')[1])
         all_lessons = crud.get_lesson_today(index)
         lessons = [crud.get_classes_by_id(lesson[2]) for lesson in all_lessons]
@@ -222,7 +239,9 @@ async def try_to_save_task(message: types.Message, state: FSMContext):
                f'Кабинет: <b>{data["cabinet"]}</b>\n'\
                f'Описание: {message.text}'
         for x_id in task_admins:
-            await bot.send_message(x_id, text, reply_markup=keyboard.task_keyboard(last_id))
+            await bot.send_message(x_id, text)
+        employee = crud.get_user(user_id=data['employee'])
+        await bot.send_message(employee.telegram_id, text, reply_markup=keyboard.employee_complete(last_id))
         await bot.delete_message(chat_id=message.from_user.id, message_id=data['message_id'])
         await bot.send_message(message.from_user.id, 'Хотите оставить ещё одну заявку?',
                                reply_markup=keyboard.kb_master())

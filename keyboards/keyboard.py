@@ -1,6 +1,6 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from database import crud
-from config import admins
+from config import admins, task_admins
 
 
 def start(telegram_id: int) -> InlineKeyboardMarkup:
@@ -13,11 +13,18 @@ def start(telegram_id: int) -> InlineKeyboardMarkup:
             text=f"Оставить заявку на ремонт",
             callback_data=f"main_repair"),
     )
-    if telegram_id in admins:
+    if telegram_id in admins or telegram_id in task_admins:
         kb.add(
             InlineKeyboardButton(
                 text=f"Администрирование",
                 callback_data=f"main_admin")
+        )
+    master_ids = [user.telegram_id for user in crud.get_all_masters()]
+    if telegram_id in master_ids:
+        kb.add(
+            InlineKeyboardButton(
+                text=f"Мои задачи",
+                callback_data=f"main_tasks")
         )
     return kb
 
